@@ -35,5 +35,37 @@ int main()
 	// Dump module
 	module.dump();
 
+	// Setup target machine for object generation
+	llvm::InitializeAllTargetInfos();
+	llvm::InitializeAllTargets();
+	llvm::InitializeAllTargetMCs();
+	llvm::InitializeAllAsmParsers();
+	llvm::InitializeAllAsmPrinters();
+	std::string error;
+	auto triple = llvm::sys::getDefaultTargetTriple();
+	auto target = llvm::TargetRegistry::lookupTarget(triple, error);
+	llvm::TargetOptions opt;
+	auto target_machine = target->createTargetMachine(triple, "generic", "", opt, llvm::Reloc::PIC_);
+	module.setDataLayout(target_machine->createDataLayout());
+
+	// Generate object
+	std::error_code errcode;
+	auto output_file = llvm::raw_fd_ostream("output.o", errcode, llvm::sys::fs::OF_None);
+	if (errcode) {
+		std::cout << "failed to open object file" << std::endl;
+		return -1;
+	}
+
+	llvm::legacy::PassManager pass;
+	if (target_machine->addPassesToEmitFile(pass, output_file, nullptr, llvm::CodeGenFileType::ObjectFile)) {
+		std::cout << "failed to add passes to emit file" << std::endl;
+		return -1;
+	}
+
+	pass.run(module);
+	output_file.flush();
+
+	std::cout << "Successfully created object file 'output.o'" << std::endl;
+
 	return 0;
 }
