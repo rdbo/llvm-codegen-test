@@ -28,6 +28,24 @@ int main()
 	std::vector<llvm::Value *> args = { fmt };
 	builder.CreateCall(printf_func, args);
 
+	// Local variable
+	auto fmt2 = builder.CreateGlobalStringPtr("Local variable: %d\n");
+	llvm::Value *undef = llvm::UndefValue::get(builder.getInt32Ty());
+  	auto alloca_ptr = new llvm::BitCastInst(undef, undef->getType(), // placeholder for local variables
+                                            "alloca.placeholder", entry_block);
+  	auto local_builder = llvm::IRBuilder<>(context);
+  	local_builder.SetInsertPoint(alloca_ptr);
+
+	auto local_var = local_builder.CreateAlloca(local_builder.getInt32Ty(), nullptr, "my_number");
+	llvm::Value *val = local_builder.getInt32(1337);
+	local_builder.CreateStore(val, local_var);
+
+	llvm::Value *loaded_val = dynamic_cast<llvm::Value *>(builder.CreateLoad(builder.getInt32Ty(), local_var, "loaded_my_number"));
+	args = { fmt2, loaded_val };
+	builder.CreateCall(printf_func, args);
+
+	alloca_ptr->eraseFromParent(); // erase placeholder
+
 	// Generate return
 	auto ret_val = llvm::Constant::getNullValue(builder.getInt32Ty());
 	builder.CreateRet(ret_val);
