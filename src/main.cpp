@@ -44,8 +44,6 @@ int main()
 	args = { fmt2, loaded_val };
 	builder.CreateCall(printf_func, args);
 
-	alloca_ptr->eraseFromParent(); // erase placeholder
-
 	// Global variable
 	auto fmt3 = builder.CreateGlobalStringPtr("Global variable: %.3lf\n");
 	auto global_val = llvm::Constant::getIntegerValue(builder.getDoubleTy(), llvm::APInt::doubleToBits(69.420));
@@ -53,6 +51,12 @@ int main()
 	loaded_val = dynamic_cast<llvm::Value *>(builder.CreateLoad(builder.getDoubleTy(), global_var, "loaded_double"));
 	args = { fmt3, loaded_val };
 	builder.CreateCall(printf_func, args);
+
+	// Array
+	auto local_arr = local_builder.CreateAlloca(llvm::ArrayType::get(local_builder.getInt32Ty(), 4), nullptr, "number_arr");
+
+	// Cleanup
+	alloca_ptr->eraseFromParent(); // erase placeholder
 
 	// Generate return
 	auto ret_val = llvm::Constant::getNullValue(builder.getInt32Ty());
