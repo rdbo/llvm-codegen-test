@@ -53,7 +53,33 @@ int main()
 	builder.CreateCall(printf_func, args);
 
 	// Array
+	auto fmt4 = builder.CreateGlobalStringPtr("My Array: [ ");
 	auto local_arr = local_builder.CreateAlloca(llvm::ArrayType::get(local_builder.getInt32Ty(), 4), nullptr, "number_arr");
+	for (size_t i = 0; i < 4; ++i) {
+		auto deref = local_builder.getInt32(0);
+		auto index = local_builder.getInt32(i);
+		auto ptr = local_builder.CreateGEP(local_arr->getAllocatedType(), local_arr, { deref, index }, "tmp_assign");
+		auto value = local_builder.getInt32(i * 10);
+		local_builder.CreateStore(value, ptr);
+	}
+
+	args = { fmt4 };
+	builder.CreateCall(printf_func, args);
+
+	// Loop through array and print
+	auto fmt5 = builder.CreateGlobalStringPtr("%d ");
+	for (size_t i = 0; i < 4; ++i) {
+		auto deref = local_builder.getInt32(0);
+		auto index = local_builder.getInt32(i);
+		auto ptr = local_builder.CreateGEP(local_arr->getAllocatedType(), local_arr, { deref, index }, "tmp_read");
+		auto value = local_builder.CreateLoad(local_builder.getInt32Ty(), ptr, "arr_value");
+		args = { fmt5, value };
+		builder.CreateCall(printf_func, args);
+	}
+
+	auto fmt6 = builder.CreateGlobalStringPtr("]\n");
+	args = { fmt6 };
+	builder.CreateCall(printf_func, args);
 
 	// Cleanup
 	alloca_ptr->eraseFromParent(); // erase placeholder
