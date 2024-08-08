@@ -69,10 +69,10 @@ int main()
 	// Loop through array and print
 	auto fmt5 = builder.CreateGlobalStringPtr("%d ");
 	for (size_t i = 0; i < 4; ++i) {
-		auto deref = local_builder.getInt32(0);
-		auto index = local_builder.getInt32(i);
-		auto ptr = local_builder.CreateGEP(local_arr->getAllocatedType(), local_arr, { deref, index }, "tmp_read");
-		auto value = local_builder.CreateLoad(local_builder.getInt32Ty(), ptr, "arr_value");
+		auto deref = builder.getInt32(0);
+		auto index = builder.getInt32(i);
+		auto ptr = builder.CreateGEP(local_arr->getAllocatedType(), local_arr, { deref, index }, "tmp_read");
+		auto value = builder.CreateLoad(builder.getInt32Ty(), ptr, "arr_value");
 		args = { fmt5, value };
 		builder.CreateCall(printf_func, args);
 	}
@@ -82,27 +82,28 @@ int main()
 	builder.CreateCall(printf_func, args);
 
 	// Loop/branching
-	auto loop_exit = llvm::BasicBlock::Create(context, "loop_exit", function); // Setup loop_exit block with the stuff after the loop
+	auto loop_exit = llvm::BasicBlock::Create(context, "myloop_exit", function); // Setup loop_exit block with the stuff after the loop
 
 	auto fmt7 = builder.CreateGlobalStringPtr("MyChar: %c\n");
-	auto mychar = builder.CreateAlloca(local_builder.getInt8Ty(), nullptr, "mychar");
+	auto mychar = local_builder.CreateAlloca(local_builder.getInt8Ty(), nullptr, "mychar");
 	local_builder.CreateStore(local_builder.getInt8('A'), mychar);
 
-	auto loop = llvm::BasicBlock::Create(context, "loop", function, loop_exit);
+	auto loop = llvm::BasicBlock::Create(context, "myloop", function, loop_exit);
 	auto loop_builder = llvm::IRBuilder<>(context);
 	loop_builder.SetInsertPoint(loop);
+	builder.CreateBr(loop);
 
-	auto mychar_val = local_builder.CreateLoad(local_builder.getInt8Ty(), mychar);
+	auto mychar_val = loop_builder.CreateLoad(loop_builder.getInt8Ty(), mychar);
 	args = { fmt7, mychar_val };
 	loop_builder.CreateCall(printf_func, args);
 
-	auto addtmp = loop_builder.CreateAdd(mychar, loop_builder.getInt8(1), "addtmp");
+	auto addtmp = loop_builder.CreateAdd(mychar_val, loop_builder.getInt8(1), "addtmp");
 	loop_builder.CreateStore(addtmp, mychar);
 	// Only go up to 'C'
 	// NOTE: 'mychar' is a pointer, so we don't compare it directly
-	mychar_val = local_builder.CreateLoad(local_builder.getInt8Ty(), mychar);
+	mychar_val = loop_builder.CreateLoad(loop_builder.getInt8Ty(), mychar);
 	auto cond = loop_builder.CreateICmp(llvm::CmpInst::Predicate::ICMP_SGT, mychar_val, local_builder.getInt8('C'), "cond");
-	loop_builder.CreateCondBr(cond, loop, loop_exit);
+	loop_builder.CreateCondBr(cond, loop_exit, loop);
 
 	// Cleanup
 	alloca_ptr->eraseFromParent(); // erase placeholder
