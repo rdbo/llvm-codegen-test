@@ -46,7 +46,7 @@ int main()
 
 	// Global variable
 	auto fmt3 = builder.CreateGlobalStringPtr("Global variable: %.3lf\n");
-	auto global_val = llvm::Constant::getIntegerValue(builder.getDoubleTy(), llvm::APInt::doubleToBits(69.420));
+	auto global_val = llvm::ConstantFP::get(builder.getDoubleTy(), llvm::APFloat(69.420));
 	auto global_var = new llvm::GlobalVariable(module, builder.getDoubleTy(), false, llvm::GlobalValue::ExternalLinkage, global_val, "my_global_double");
 	loaded_val = dynamic_cast<llvm::Value *>(builder.CreateLoad(builder.getDoubleTy(), global_var, "loaded_double"));
 	args = { fmt3, loaded_val };
